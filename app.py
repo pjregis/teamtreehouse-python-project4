@@ -2,7 +2,7 @@ from models import Base, session, Product, engine
 import csv
 from datetime import datetime
 import time
-import decimal
+from decimal import Decimal, DecimalException
 
 
 def menu():
@@ -53,17 +53,13 @@ def clean_price(price):
     Cleans the price string
     """
     try:
-        if price == '':
-            raise ValueError
         if '$' in price:
             price_split = price.split('$')
-            price_dec = decimal.Decimal(price_split[1])
+            cleaned_price = Decimal(price_split[1])
         else:
-            price_dec = decimal.Decimal(price)
-        if price_dec < 0:
-            raise ValueError
-    except ValueError:
-        input('''\n ******** Price Error ********
+            cleaned_price = Decimal(price)
+    except (ValueError, DecimalException):
+        input('''\n********** Price Error **********
               \rThe price should be a number without a currency symbol and not less than 0.
               \rExample: 10.99
               \rPress enter to try again.
@@ -71,7 +67,7 @@ def clean_price(price):
               ''')
         return
     else:
-        price_cents = price_dec * 100
+        price_cents = (cleaned_price * 100)
         return int(price_cents)
 
 
@@ -130,7 +126,7 @@ def csv_backup():
         out.writerow(['product_name', 'product_price', 'product_quantity', 'date_updated'])
 
         for product in session.query(Product).all():
-            out.writerow([product.product_name, f'${product.product_price / 100}',
+            out.writerow([product.product_name, f'${format(product.product_price / 100, ".2f")}',
                           product.product_quantity, product.date_updated.strftime("%m/%d/%Y")])
 
 
@@ -155,7 +151,7 @@ def app():
             the_product = session.query(Product).filter(Product.product_id == product_id).first()
             print(f'''\n**************************************************
                       \r{the_product.product_name}                  
-                      \rPrice: ${the_product.product_price / 100}
+                      \rPrice: ${format(the_product.product_price / 100, '.2f')}
                       \rQuantity: {the_product.product_quantity}
                       \rUpdated: {the_product.date_updated.strftime("%m/%d/%Y")}
                       \r**************************************************
